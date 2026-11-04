@@ -7,3 +7,5 @@ build/
 .pytest_cache/
 install/
 .vscode/
+# 演示视频走 GitHub 托管，不入库，避免撑大仓库历史
+assert/*.mp4
