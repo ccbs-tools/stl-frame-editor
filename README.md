@@ -11,12 +11,16 @@ shows the accumulated rotation matrix and the equivalent URDF `rpy`, and **Save 
 |---|---|
 | ![Empty view](assert/soft-empty-view.png) | ![Loaded view](assert/open-stl-view.png) |
 
+### Demo
+
+https://private-user-images.githubusercontent.com/34444109/694237544-cf939573-5380-42bf-baad-11ce17f5d5cb.mp4
+
 Dependencies: PySide6, PyOpenGL, numpy, trimesh.
 
 ## Install
 
 ```bash
-cd software/python/ccbs-stl-view
+cd path/to/stl-frame-editor
 uv venv && uv pip install -e .
 ```
 

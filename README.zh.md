@@ -9,12 +9,16 @@
 |---|---|
 | ![空视图](assert/soft-empty-view.png) | ![加载视图](assert/open-stl-view.png) |
 
+### 演示
+
+https://private-user-images.githubusercontent.com/34444109/694237544-cf939573-5380-42bf-baad-11ce17f5d5cb.mp4
+
 依赖：PySide6、PyOpenGL、numpy、trimesh。
 
 ## 安装
 
 ```bash
-cd software/python/ccbs-stl-view
+cd path/to/stl-frame-editor
 uv venv && uv pip install -e .
 ```
 
