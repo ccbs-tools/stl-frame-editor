@@ -1,4 +1,4 @@
-"""入口：python -m ccbs_stl_frame_editor [xxx.stl]
+"""入口：python -m stl_frame_editor [xxx.stl]
 
 操作:
     左键拖动   旋转（绕目标点转台式旋转，Z 轴朝上）

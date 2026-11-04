@@ -8,11 +8,11 @@
 ## 安装 / 运行
 
 ```bash
-cd software/python/ccbs-stl-frame-editor
+cd software/python/stl-frame-editor
 uv venv && uv pip install -e .
-ccbs-stl-frame-editor [xxx.stl]
+stl-frame-editor [xxx.stl]
 # 或
-python -m ccbs_stl_frame_editor [xxx.stl]
+python -m stl_frame_editor [xxx.stl]
 ```
 
 ## 操作
@@ -33,13 +33,13 @@ python -m ccbs_stl_frame_editor [xxx.stl]
 ```bash
 uv pip install pyinstaller
 uv run pyinstaller main.spec --noconfirm
-# 输出 dist/ccbs-stl-frame-editor/ccbs-stl-frame-editor.exe，依赖在 ccbs-stl-frame-editor-lib/
+# 输出 dist/stl-frame-editor/stl-frame-editor.exe，依赖在 stl-frame-editor-lib/
 ```
 
 ## 结构
 
 ```
-ccbs_stl_frame_editor/
+stl_frame_editor/
   __main__.py     入口 main()
   main_window.py  主窗口、菜单、应用图标
   gl_widget.py    OpenGL 视口（网格 / 坐标轴 / 相机 / 拖放）

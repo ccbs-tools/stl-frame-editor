@@ -1,12 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-# 文件夹打包（启动快）：pyinstaller main.spec  →  dist/ccbs-stl-frame-editor/ccbs-stl-frame-editor.exe
+# 文件夹打包（启动快）：pyinstaller main.spec  →  dist/stl-frame-editor/stl-frame-editor.exe
 
 a = Analysis(
     ['run.py'],
     pathex=[],
     binaries=[],
     datas=[('icon.ico', '.'), ('icon.png', '.')],   # 运行时图标（make_app_icon 从 _MEIPASS 找）
-    hiddenimports=['ccbs_stl_frame_editor'],
+    hiddenimports=['stl_frame_editor'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -30,9 +30,9 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='ccbs-stl-frame-editor',
+    name='stl-frame-editor',
     icon='icon.ico',
-    contents_directory='ccbs-stl-frame-editor-lib',   # 依赖目录名（PyInstaller 6 默认 _internal）
+    contents_directory='stl-frame-editor-lib',   # 依赖目录名（PyInstaller 6 默认 _internal）
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -49,7 +49,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    name='ccbs-stl-frame-editor',
+    name='stl-frame-editor',
     strip=False,
     upx=False,
     upx_exclude=[],

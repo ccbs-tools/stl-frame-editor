@@ -1,5 +1,5 @@
 [project]
-name = "ccbs-stl-frame-editor"
+name = "stl-frame-editor"
 version = "0.1.0"
 description = "STL 坐标系修改器：查看 STL、绕世界轴旋转 ±90° 后另存（PySide6 + OpenGL）"
 requires-python = ">=3.10"
@@ -11,11 +11,11 @@ dependencies = [
 ]
 
 [project.scripts]
-ccbs-stl-frame-editor = "ccbs_stl_frame_editor.__main__:main"
+stl-frame-editor = "stl_frame_editor.__main__:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["ccbs_stl_frame_editor"]
+packages = ["stl_frame_editor"]
