@@ -1,50 +1,64 @@
-# CCBS STL View（STL 坐标系修改器）
+# STL Coordinate Frame Editor
 
-把 `.stl` 拖进窗口即可显示，原点处标注 XYZ 三色轴；右上角面板可把模型绕世界 X/Y/Z 轴转 ±90°（绕原点，右手定则），
-显示累计旋转矩阵和等效 URDF rpy，"另存为 STL" 写出新文件（原文件不动）。
+**English** | [中文](README.zh.md)
 
-依赖：PySide6、PyOpenGL、numpy、trimesh。
+Drag a `.stl` file into the window to view it, with a tri-color XYZ axis drawn at the origin.
+The panel in the top-right rotates the model ±90° about the world X/Y/Z axes (about the origin, right-hand rule),
+shows the accumulated rotation matrix and the equivalent URDF `rpy`, and **Save As STL** writes a new file
+(the original is never touched). The menu bar supports switching between English and Chinese at runtime.
 
-## 安装 / 运行
+| Empty window (drop target) | STL loaded |
+|---|---|
+| ![Empty view](assert/soft-empty-view.png) | ![Loaded view](assert/open-stl-view.png) |
+
+Dependencies: PySide6, PyOpenGL, numpy, trimesh.
+
+## Install
 
 ```bash
-cd software/python/stl-frame-editor
+cd software/python/ccbs-stl-view
 uv venv && uv pip install -e .
+```
+
+## Run
+
+```bash
 stl-frame-editor [xxx.stl]
-# 或
+# or
 python -m stl_frame_editor [xxx.stl]
 ```
 
-## 操作
+## Controls
 
-| 操作 | 说明 |
+| Action | Description |
 |------|------|
-| 左键拖动 | 旋转（转台式，Z 轴朝上） |
-| 右键 / 中键 | 平移 |
-| 滚轮 | 缩放 |
-| `F` / `R` | 适配视角 / 回到初始视角 |
-| `W` / `G` / `A` | 线框 / 地面网格 / 原点坐标轴 开关 |
-| `Ctrl+O` | 打开文件 |
+| Left drag | Rotate (turntable, Z up) |
+| Right / Middle drag | Pan |
+| Wheel | Zoom |
+| `F` / `R` | Fit view / back to initial view |
+| `W` / `G` / `A` | Toggle wireframe / ground grid / origin axes |
+| `Ctrl+O` | Open file |
 
-红 = X，绿 = Y，蓝 = Z。右下角小三轴始终显示当前朝向。
+Red = X, Green = Y, Blue = Z. The small axis gizmo in the bottom-right always shows the current orientation.
 
-## 打包（onedir）
+## Package (onedir)
 
 ```bash
 uv pip install pyinstaller
 uv run pyinstaller main.spec --noconfirm
-# 输出 dist/stl-frame-editor/stl-frame-editor.exe，依赖在 stl-frame-editor-lib/
+# Output: dist/stl-frame-editor/stl-frame-editor.exe, with dependencies alongside it
 ```
 
-## 结构
+## Structure
 
 ```
 stl_frame_editor/
-  __main__.py     入口 main()
-  main_window.py  主窗口、菜单、应用图标
-  gl_widget.py    OpenGL 视口（网格 / 坐标轴 / 相机 / 拖放）
-  panel.py        右上角旋转面板
-  mesh.py         STL 读取、旋转矩阵、rpy
-run.py            PyInstaller 入口
-main.spec         PyInstaller 配置
+  __main__.py     entry point main()
+  main_window.py  main window, menus, app icon
+  gl_widget.py    OpenGL viewport (grid / axes / camera / drag-drop)
+  panel.py        top-right rotation panel
+  mesh.py         STL loading, rotation matrix, rpy
+  i18n.py         language strings and runtime switching
+run.py            PyInstaller entry
+main.spec         PyInstaller config
 ```
