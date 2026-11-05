@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import time
 from pathlib import Path
 
 import numpy as np
@@ -12,6 +13,7 @@ from PySide6 import QtCore, QtGui
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from .i18n import i18n, tr
+from .log import logger
 from .mesh import AXIS_COLORS, AXIS_DIRS, load_stl, rot_matrix, rotation_rpy_deg
 
 MESH_COLOR = (0.72, 0.76, 0.80)
@@ -32,8 +34,8 @@ class StlGLWidget(QOpenGLWidget):
         self.setMouseTracking(False)
 
         self.path: Path | None = None
-        self.mesh: trimesh.Trimesh | None = None       # 原始网格（未旋转）
-        self.verts0: np.ndarray | None = None            # 原始展开顶点 / 法线
+        self.mesh: trimesh.Trimesh | None = None         # 文件里读出的网格（未旋转），保存时用它
+        self.verts0: np.ndarray | None = None            # 展开顶点 / 法线（未旋转）
         self.normals0: np.ndarray | None = None
         self.verts: np.ndarray | None = None             # 旋转后用于显示
         self.normals: np.ndarray | None = None
@@ -74,12 +76,17 @@ class StlGLWidget(QOpenGLWidget):
     # ------------------------------------------------------------------ 加载
     def load(self, path) -> bool:
         path = Path(path)
+        size = path.stat().st_size if path.is_file() else -1
+        logger.info("加载 STL: {} ({:,} bytes)", path, size)
+        t0 = time.perf_counter()
         try:
             verts, normals, mesh = load_stl(path)
         except Exception as e:  # noqa: BLE001
+            logger.exception("加载失败: {}", path)
             self.loadFailed.emit(tr("gl.load_failed", name=path.name, err=e))
             return False
         if len(verts) == 0:
+            logger.warning("文件没有三角面: {}", path)
             self.loadFailed.emit(tr("gl.no_triangles", name=path.name))
             return False
         self.path = path
@@ -89,6 +96,15 @@ class StlGLWidget(QOpenGLWidget):
         self.ops = []
         self._apply_rotation(refit_home=True)
         self.rotationChanged.emit()
+        ext = self.bbox_max - self.bbox_min
+        logger.info(
+            "加载完成: {} 三角面, 包围盒 min={} max={} 尺寸={} , 耗时 {:.0f} ms",
+            f"{self.n_faces:,}",
+            np.round(self.bbox_min, 4).tolist(),
+            np.round(self.bbox_max, 4).tolist(),
+            np.round(ext, 4).tolist(),
+            (time.perf_counter() - t0) * 1000,
+        )
         return True
 
     # ------------------------------------------------------------------ 旋转 / 保存
@@ -100,24 +116,36 @@ class StlGLWidget(QOpenGLWidget):
         self.rot = rot_matrix(axis, deg) @ self.rot
         self._apply_rotation()
         self.rotationChanged.emit()
+        logger.info("旋转 {}{:+d}° | 序列={} | rpy={}",
+                    axis, deg, self._ops_str(), self._rpy_str())
 
     def undo_rotation(self) -> None:
         if not self.ops:
             return
-        self.ops.pop()
+        undone = self.ops.pop()
         self.rot = np.eye(3)
         for axis, deg in self.ops:
             self.rot = rot_matrix(axis, deg) @ self.rot
         self._apply_rotation()
         self.rotationChanged.emit()
+        logger.info("撤销 {}{:+d}° | 序列={} | rpy={}",
+                    undone[0], undone[1], self._ops_str() or "(空)", self._rpy_str())
 
     def reset_rotation(self) -> None:
         if not self.ops:
             return
+        logger.info("复位旋转，丢弃序列 {}", self._ops_str())
         self.ops = []
         self.rot = np.eye(3)
         self._apply_rotation()
         self.rotationChanged.emit()
+
+    def _ops_str(self) -> str:
+        return " ".join(f"{a}{d:+d}" for a, d in self.ops)
+
+    def _rpy_str(self) -> str:
+        r, p, y = self.rotation_rpy_deg()
+        return f"({r:.0f}, {p:.0f}, {y:.0f})"
 
     @property
     def is_rotated(self) -> bool:
@@ -131,6 +159,9 @@ class StlGLWidget(QOpenGLWidget):
         if self.mesh is None:
             return False
         path = Path(path)
+        logger.info("另存为 STL: {} | 源={} | 序列={} | rpy={} | 面数={:,}",
+                    path, self.path, self._ops_str() or "(未旋转)", self._rpy_str(), self.n_faces)
+        t0 = time.perf_counter()
         try:
             T = np.eye(4)
             T[:3, :3] = self.rot
@@ -138,8 +169,12 @@ class StlGLWidget(QOpenGLWidget):
             out.apply_transform(T)
             out.export(str(path), file_type="stl")
         except Exception as e:  # noqa: BLE001
+            logger.exception("保存失败: {}", path)
             self.loadFailed.emit(tr("gl.save_failed", name=path.name, err=e))
             return False
+        size = path.stat().st_size if path.is_file() else -1
+        logger.info("保存完成: {:,} 三角面, {:,} bytes, 耗时 {:.0f} ms",
+                    len(out.faces), size, (time.perf_counter() - t0) * 1000)
         self.meshLoaded.emit(tr("gl.saved", path=path, n=f"{len(out.faces):,}"))
         return True
 
@@ -147,10 +182,11 @@ class StlGLWidget(QOpenGLWidget):
         """按当前语言生成状态栏的网格信息文字。"""
         ext = self.bbox_max - self.bbox_min
         unit_hint = tr("gl.unit_mm") if ext.max() > 5.0 else tr("gl.unit_m")
+        note = tr("gl.rotated_note") if self.ops else ""
         self.mesh_info = tr(
             "gl.mesh_info",
             name=self.path.name,
-            note=tr("gl.rotated_note") if self.ops else "",
+            note=note,
             n=f"{self.n_faces:,}",
             mn=f"{self.bbox_min[0]:.4g}, {self.bbox_min[1]:.4g}, {self.bbox_min[2]:.4g}",
             mx=f"{self.bbox_max[0]:.4g}, {self.bbox_max[1]:.4g}, {self.bbox_max[2]:.4g}",
@@ -235,6 +271,9 @@ class StlGLWidget(QOpenGLWidget):
     def dropEvent(self, e: QtGui.QDropEvent):
         files = self._stl_urls(e.mimeData())
         if files:
+            if len(files) > 1:
+                logger.info("拖入 {} 个文件，只加载第一个", len(files))
+            logger.info("拖放加载: {}", files[0])
             self.load(files[0])
             e.acceptProposedAction()
 

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from PySide6 import QtCore
 
+from .log import logger
+
 DEFAULT_LANG = "en"
 LANGUAGES = (("en", "English"), ("zh", "中文（简体）"))
 _SETTINGS_KEY = "language"
@@ -25,6 +27,24 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu.fit": "&Fit View",
         "menu.quit": "&Quit",
         "menu.language": "&Language",
+        "menu.help": "&Help",
+        "menu.repo": "&Repository Homepage",
+        "menu.video": "&Video Tutorial",
+        "menu.changelog": "Version &Info",
+        "menu.check_update": "Check for &Updates",
+        "chg.title": "Version info  (current v{ver})",
+        "chg.check": "Check for updates",
+        "chg.close": "Close",
+        "upd.title": "Check for updates",
+        "upd.checking": "Checking for updates…",
+        "upd.countdown": "{sec} s",
+        "upd.cancel": "Cancel",
+        "upd.close": "Close",
+        "upd.download": "Download",
+        "upd.latest": "You are on the latest version (v{cur}).",
+        "upd.newer": "New version v{latest} available (current v{cur}).",
+        "upd.failed_short": "Check failed. Please check your network and try again.",
+        "upd.timeout": "No response within {sec} s. Check your network and try again.",
         "status.drop_hint": "Drop a .stl file into the window",
         "status.no_mesh": "No STL loaded yet",
         "dialog.open_title": "Open STL",
@@ -62,6 +82,24 @@ _STRINGS: dict[str, dict[str, str]] = {
         "menu.fit": "适配视角(&F)",
         "menu.quit": "退出(&Q)",
         "menu.language": "语言(&L)",
+        "menu.help": "帮助(&H)",
+        "menu.repo": "仓库主页(&R)",
+        "menu.video": "视频教程(&V)",
+        "menu.changelog": "版本介绍(&I)",
+        "menu.check_update": "检查更新(&U)",
+        "chg.title": "版本介绍（当前 v{ver}）",
+        "chg.check": "检查版本更新",
+        "chg.close": "关闭",
+        "upd.title": "检查版本更新",
+        "upd.checking": "正在检查更新…",
+        "upd.countdown": "{sec} 秒",
+        "upd.cancel": "取消",
+        "upd.close": "关闭",
+        "upd.download": "下载",
+        "upd.latest": "已是最新版本（v{cur}）。",
+        "upd.newer": "发现新版本 v{latest}（当前 v{cur}）。",
+        "upd.failed_short": "检查失败，请检查网络后重试。",
+        "upd.timeout": "{sec} 秒内没有响应，请检查网络后重试。",
         "status.drop_hint": "把 .stl 文件拖进窗口",
         "status.no_mesh": "还没有加载 STL",
         "dialog.open_title": "打开 STL",
@@ -109,11 +147,13 @@ class _I18n(QtCore.QObject):
         """从 QSettings 读取上次选择的语言；需在 QApplication 创建后调用。"""
         saved = QtCore.QSettings().value(_SETTINGS_KEY, DEFAULT_LANG)
         self._lang = saved if saved in _STRINGS else DEFAULT_LANG
+        logger.info("语言: {} (设置中保存的值={!r})", self._lang, saved)
         return self._lang
 
     def set(self, lang: str) -> None:
         if lang not in _STRINGS or lang == self._lang:
             return
+        logger.info("切换语言 {} -> {}", self._lang, lang)
         self._lang = lang
         QtCore.QSettings().setValue(_SETTINGS_KEY, lang)
         self.languageChanged.emit(lang)

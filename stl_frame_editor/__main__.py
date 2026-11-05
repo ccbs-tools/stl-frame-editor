@@ -16,12 +16,27 @@ import sys
 
 
 def main(argv: list[str] | None = None) -> int:
-    from PySide6 import QtGui, QtWidgets
+    import platform
 
+    from .log import logger, setup_logging
+
+    log_file = setup_logging()
+
+    from PySide6 import QtCore, QtGui, QtWidgets
+
+    from . import __version__
     from .i18n import i18n
     from .main_window import MainWindow, make_app_icon
 
     args = sys.argv[1:] if argv is None else argv
+    logger.info("=" * 60)
+    logger.info(
+        "stl-frame-editor v{} 启动 | python {} | PySide6 {} | {} | frozen={}",
+        __version__, platform.python_version(), QtCore.__version__,
+        platform.platform(), bool(getattr(sys, "frozen", False)),
+    )
+    logger.info("日志文件: {}", log_file)
+    logger.debug("argv: {}", args)
 
     # Windows：不用 Python 默认 AppID，任务栏才会显示本程序图标而不是 python.exe
     if sys.platform == "win32":
@@ -46,10 +61,14 @@ def main(argv: list[str] | None = None) -> int:
     app.setWindowIcon(icon)
 
     initial = args[0] if args else None
+    if initial:
+        logger.info("命令行指定启动文件: {}", initial)
     win = MainWindow(initial)
     win.setWindowIcon(icon)
     win.show()
-    return app.exec()
+    code = app.exec()
+    logger.info("程序退出 code={}", code)
+    return code
 
 
 if __name__ == "__main__":

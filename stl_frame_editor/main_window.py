@@ -7,9 +7,12 @@ from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
+from .changelog import REPO_HOME, VIDEO_TUTORIAL
 from .gl_widget import StlGLWidget
 from .i18n import LANGUAGES, i18n, tr
+from .log import logger
 from .panel import RotatePanel
+from .version_dialogs import ChangelogDialog, UpdateCheckDialog
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -54,6 +57,21 @@ class MainWindow(QtWidgets.QMainWindow):
             self.lang_group.addAction(act)
             self.menu_lang.addAction(act)
 
+        self.menu_help = self.menuBar().addMenu("")
+        self.act_repo = QtGui.QAction(self)
+        self.act_repo.triggered.connect(lambda: self._open_url(REPO_HOME))
+        self.act_video = QtGui.QAction(self)
+        self.act_video.triggered.connect(lambda: self._open_url(VIDEO_TUTORIAL))
+        self.act_changelog = QtGui.QAction(self)
+        self.act_changelog.triggered.connect(self._show_changelog)
+        self.act_check_update = QtGui.QAction(self)
+        self.act_check_update.triggered.connect(self._show_update_check)
+        self.menu_help.addAction(self.act_repo)
+        self.menu_help.addAction(self.act_video)
+        self.menu_help.addSeparator()
+        self.menu_help.addAction(self.act_changelog)
+        self.menu_help.addAction(self.act_check_update)
+
         i18n.languageChanged.connect(self.retranslate)
         self.retranslate()
 
@@ -69,10 +87,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menu_lang.setTitle(tr("menu.language"))
         for act in self.lang_group.actions():
             act.setChecked(act.data() == i18n.lang)
+        self.menu_help.setTitle(tr("menu.help"))
+        self.act_repo.setText(tr("menu.repo"))
+        self.act_video.setText(tr("menu.video"))
+        self.act_changelog.setText(tr("menu.changelog"))
+        self.act_check_update.setText(tr("menu.check_update"))
         self._update_title()
         if self.gl.verts is None:
             self.statusBar().showMessage(tr("status.drop_hint"))
         # 已加载时 gl.retranslate 会重新发 meshLoaded，状态栏随之更新
+
+    @staticmethod
+    def _open_url(url: str) -> None:
+        ok = QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
+        logger.info("打开链接: {} -> {}", url, "ok" if ok else "失败")
+
+    def _show_changelog(self) -> None:
+        logger.info("打开「版本介绍」")
+        ChangelogDialog(self).exec()
+
+    def _show_update_check(self) -> None:
+        logger.info("菜单触发「检查更新」")
+        UpdateCheckDialog(self).exec()
 
     def _update_title(self) -> None:
         if self.gl.path is None:
@@ -90,28 +126,36 @@ class MainWindow(QtWidgets.QMainWindow):
         fn, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, tr("dialog.open_title"), start, tr("dialog.open_filter"))
         if fn:
+            logger.info("打开对话框选择: {}", fn)
             self.gl.load(fn)
+        else:
+            logger.debug("打开对话框取消")
 
     def save_dialog(self):
         if self.gl.mesh is None:
+            logger.debug("另存为：尚未加载 STL，忽略")
             self.statusBar().showMessage(tr("status.no_mesh"), 4000)
             return
         src = self.gl.path
-        suffix = "_" + "".join(f"{a}{'p' if d > 0 else 'n'}{abs(d)}" for a, d in self.gl.ops) if self.gl.ops else "_copy"
-        default = src.with_name(f"{src.stem}{suffix}{src.suffix}")
+        suffix = "_" + "".join(f"{a}{'p' if d > 0 else 'n'}{abs(d)}" for a, d in self.gl.ops) if self.gl.ops else ""
+        default = src.with_name(f"{src.stem}{suffix or '_copy'}{src.suffix}")
         fn, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, tr("dialog.save_title"), str(default), tr("dialog.save_filter"))
         if not fn:
+            logger.debug("另存为对话框取消")
             return
         if not fn.lower().endswith(".stl"):
             fn += ".stl"
         if Path(fn).resolve() == src.resolve():
+            logger.warning("另存为目标与源文件相同，询问是否覆盖: {}", src)
             ret = QtWidgets.QMessageBox.question(
                 self, tr("dialog.overwrite_title"), tr("dialog.overwrite_text", path=src),
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.No)
             if ret != QtWidgets.QMessageBox.StandardButton.Yes:
+                logger.info("用户取消覆盖原文件")
                 return
+            logger.info("用户确认覆盖原文件")
         self.gl.save_as(fn)
 
     # 整个窗口（含菜单栏、状态栏）都接受拖放，转交给 GL 控件
