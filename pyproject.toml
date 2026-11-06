@@ -1,6 +1,6 @@
 [project]
 name = "stl-frame-editor"
-version = "0.1.0"
+version = "0.2.0"
 description = "STL 坐标系修改器：查看 STL、绕世界轴旋转 ±90° 后另存（PySide6 + OpenGL）"
 requires-python = ">=3.10"
 dependencies = [

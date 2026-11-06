@@ -34,6 +34,22 @@ UPDATE_CHECK_TIMEOUT_S = 20.0
 
 RELEASES: tuple[dict, ...] = (
     {
+        "version": "0.2.0",
+        "date": "2026-11-06",
+        "notes": {
+            "zh": [
+                "帮助菜单：仓库主页、视频教程、版本介绍、检查更新。",
+                "对照 GitHub Releases 检查是否有新版本，可直接打开下载。",
+                "运行日志写到 ~/.ccbs/stl-frame-editor/app.log。",
+            ],
+            "en": [
+                "Help menu: repository, video tutorial, version info, and update check.",
+                "Compare with GitHub Releases and open the download when a newer version exists.",
+                "Runtime log at ~/.ccbs/stl-frame-editor/app.log.",
+            ],
+        },
+    },
+    {
         "version": "0.1.0",
         "date": "2026-11-04",
         "notes": {
