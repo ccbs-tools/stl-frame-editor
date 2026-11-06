@@ -77,6 +77,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         shell: python
         env:
+          PYTHONUTF8: "1"   # Windows runner 默认 cp1252，print 中文会崩
           VER: ${{ steps.ver.outputs.version }}
           ZIP: ${{ steps.pack.outputs.zip }}
         run: |
