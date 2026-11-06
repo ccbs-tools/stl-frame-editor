@@ -20,13 +20,15 @@ from typing import Callable, Optional
 from . import __version__ as APP_VERSION
 from .log import logger
 
-REPO_HOME = "https://github.com/ccbs-tools/stl-frame-editor"
+# 源码仓库 ccbs-tools/stl-frame-editor 为私有；Release 由 Actions 发布到下面这个公开仓库
+RELEASE_REPO = "ccbs-tools/stl-frame-editor-release"
+REPO_HOME = f"https://github.com/{RELEASE_REPO}"
 # 视频教程占位：有正式地址后改这里即可
-VIDEO_TUTORIAL = "https://github.com/ccbs-tools/stl-frame-editor#demo"
+VIDEO_TUTORIAL = f"{REPO_HOME}#demo"
 # 方式一：网页 /releases/latest 会 302 到 /releases/tag/<tag>，没有 API 的 60 次/小时限额
 RELEASES_LATEST_PAGE = f"{REPO_HOME}/releases/latest"
 # 方式二：REST API（未登录按 IP 限 60 次/小时，走共享代理时容易 403）
-RELEASES_API = "https://api.github.com/repos/ccbs-tools/stl-frame-editor/releases/latest"
+RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases/latest"
 # 与 .github/workflows/build.yml 里 "Package zip" 的命名保持一致
 ASSET_NAME_FMT = "stl-frame-editor-v{ver}-windows-x64.zip"
 # 检查更新总预算：两种方式并发竞速，谁先成功用谁；与对话框倒计时一致

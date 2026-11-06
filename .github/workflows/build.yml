@@ -1,16 +1,23 @@
 name: Build (PyInstaller)
 
 # 触发方式：
-#   1) 在 Actions 页面手动点 "Run workflow"（workflow_dispatch）
-#   2) 推送 v 开头的 tag（如 v0.1.0）时，自动打包并发布 Release
+#   1) 在 Actions 页面手动点 "Run workflow"（workflow_dispatch）：只打包，产物在 Artifacts
+#   2) 推送 v 开头的 tag（如 v0.1.0）：打包并发布 Release 到公开仓库 RELEASE_REPO
+#
+# 发布到另一个仓库依赖 GitHub App（ccbs-release-bot）：
+#   - App 安装在 ccbs-tools 组织，仅勾选 RELEASE_REPO，权限 Contents: Read and write
+#   - 本仓库 Secrets：RELEASE_APP_ID（App ID）、RELEASE_APP_PRIVATE_KEY（.pem 全文）
 on:
   workflow_dispatch:
   push:
     tags:
       - "v*"
 
+env:
+  RELEASE_REPO: ccbs-tools/stl-frame-editor-release
+
 permissions:
-  contents: write   # 发布 Release 需要
+  contents: read   # 本仓库只需读；写公开仓库用 App token
 
 jobs:
   build-windows:
@@ -64,9 +71,86 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Publish Release (on tag)
+      # ---------- 以下仅在推 tag 时执行：发布到公开仓库 ----------
+
+      - name: Release notes from changelog.py
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
+        shell: python
+        env:
+          VER: ${{ steps.ver.outputs.version }}
+          ZIP: ${{ steps.pack.outputs.zip }}
+        run: |
+          import os
+          from stl_frame_editor.changelog import RELEASES, release_notes
+
+          ver, zip_name = os.environ["VER"], os.environ["ZIP"]
+          entry = next((e for e in RELEASES if e["version"] == ver), None)
+          lines = [f"## stl-frame-editor v{ver}", ""]
+          if entry is None:
+              lines.append(f"（changelog.py 中没有 {ver} 的条目，请补充 RELEASES）")
+          else:
+              lines.append(f"发布日期 / Date: {entry.get('date', '')}")
+              lines += ["", "### 更新内容"] + [f"- {s}" for s in release_notes(entry, "zh")]
+              lines += ["", "### Changes"] + [f"- {s}" for s in release_notes(entry, "en")]
+          lines += ["", "### 下载 / Download", f"- Windows x64: `{zip_name}`"]
+          with open("RELEASE_NOTES.md", "w", encoding="utf-8") as f:
+              f.write("\n".join(lines) + "\n")
+          print(open("RELEASE_NOTES.md", encoding="utf-8").read())
+
+      - name: Mint GitHub App token for release repo
+        if: startsWith(github.ref, 'refs/tags/')
+        id: app-token
+        uses: actions/create-github-app-token@v1
         with:
-          files: ${{ steps.pack.outputs.zip }}
-          generate_release_notes: true
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ccbs-tools
+          repositories: stl-frame-editor-release
+
+      - name: Ensure release repo is initialized
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          # 空仓库没有默认分支，创建 Release 时无法自动建 tag；先推一个 README 初始化
+          if gh api "repos/${RELEASE_REPO}/commits?per_page=1" >/dev/null 2>&1; then
+            echo "release repo already has commits"
+            exit 0
+          fi
+          echo "release repo is empty, pushing initial README"
+          tmp="$(mktemp -d)"
+          cd "$tmp"
+          git init -b main -q
+          cat > README.md <<EOF
+          # stl-frame-editor
+
+          CCBS STL 坐标系修改器的发布仓库。Windows 安装包见 [Releases](https://github.com/${RELEASE_REPO}/releases)。
+
+          Release-only repository for stl-frame-editor. Windows builds are under [Releases](https://github.com/${RELEASE_REPO}/releases).
+          EOF
+          git -c user.name="ccbs-release-bot[bot]" \
+              -c user.email="ccbs-release-bot[bot]@users.noreply.github.com" \
+              add README.md
+          git -c user.name="ccbs-release-bot[bot]" \
+              -c user.email="ccbs-release-bot[bot]@users.noreply.github.com" \
+              commit -q -m "Initial commit"
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${RELEASE_REPO}.git" main
+
+      - name: Publish Release to release repo
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ github.ref_name }}
+          ZIP: ${{ steps.pack.outputs.zip }}
+        run: |
+          set -euo pipefail
+          sha256sum "$ZIP" > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release create "$TAG" "$ZIP" SHA256SUMS.txt \
+            --repo "$RELEASE_REPO" \
+            --title "stl-frame-editor $TAG" \
+            --notes-file RELEASE_NOTES.md
+          echo "https://github.com/${RELEASE_REPO}/releases/tag/${TAG}" >> "$GITHUB_STEP_SUMMARY"
