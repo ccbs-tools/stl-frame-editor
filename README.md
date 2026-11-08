@@ -9,27 +9,31 @@ shows the accumulated rotation matrix and the equivalent URDF `rpy`, and **Save 
 
 | Empty window (drop target) | STL loaded |
 |---|---|
-| ![Empty view](assert/soft-empty-view.png) | ![Loaded view](assert/open-stl-view.png) |
+| ![Empty view](assets/soft-empty-view.png) | ![Loaded view](assets/open-stl-view.png) |
 
 ### Demo
 
 https://private-user-images.githubusercontent.com/34444109/694237544-cf939573-5380-42bf-baad-11ce17f5d5cb.mp4
 
-Dependencies: PySide6, PyOpenGL, numpy, trimesh.
+Dependencies: PySide6, PyOpenGL, numpy, trimesh, loguru.
 
-## Install
+## Download
 
-```bash
-cd path/to/stl-frame-editor
-uv venv && uv pip install -e .
-```
+Grab the latest `stl-frame-editor-vX.Y.Z-windows-x64.zip` from
+[Releases](https://github.com/ccbs-tools/stl-frame-editor-release/releases), unzip anywhere and run
+`stl-frame-editor.exe`. No installation required; `SHA256SUMS.txt` next to it lets you verify the download.
 
-## Run
+Requirements: Windows 10/11 x64.
 
-```bash
-stl-frame-editor [xxx.stl]
-# or
-python -m stl_frame_editor [xxx.stl]
+## Run from source
+
+Needs [uv](https://docs.astral.sh/uv/) (it will fetch Python itself):
+
+```powershell
+git clone https://github.com/ccbs-tools/stl-frame-editor.git
+cd stl-frame-editor
+uv sync
+uv run python -m stl_frame_editor [xxx.stl]
 ```
 
 ## Controls
@@ -47,8 +51,8 @@ Red = X, Green = Y, Blue = Z. The small axis gizmo in the bottom-right always sh
 
 ## Package (onedir)
 
-```bash
-uv pip install pyinstaller
+```powershell
+uv sync --group dev
 uv run pyinstaller main.spec --noconfirm
 # Output: dist/stl-frame-editor/stl-frame-editor.exe, with dependencies alongside it
 ```
@@ -57,12 +61,16 @@ uv run pyinstaller main.spec --noconfirm
 
 ```
 stl_frame_editor/
-  __main__.py     entry point main()
-  main_window.py  main window, menus, app icon
-  gl_widget.py    OpenGL viewport (grid / axes / camera / drag-drop)
-  panel.py        top-right rotation panel
-  mesh.py         STL loading, rotation matrix, rpy
-  i18n.py         language strings and runtime switching
-run.py            PyInstaller entry
-main.spec         PyInstaller config
+  __main__.py         entry point main()
+  main_window.py      main window, menus, app icon
+  gl_widget.py        OpenGL viewport (grid / axes / camera / drag-drop)
+  panel.py            top-right rotation panel
+  mesh.py             STL loading, rotation matrix, rpy
+  i18n.py             language strings and runtime switching
+  log.py              loguru logging (%APPDATA%\ccbs\stl-frame-editor\logs\app.log)
+  changelog.py        version history + update check
+  version_dialogs.py  version info / update check dialogs
+assets/               icon.ico / icon.png and README screenshots
+run.py                PyInstaller entry
+main.spec             PyInstaller config
 ```

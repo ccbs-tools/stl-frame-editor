@@ -7,5 +7,8 @@ build/
 .pytest_cache/
 install/
 .vscode/
+*.zip
+SHA256SUMS.txt
+RELEASE_NOTES.md
 # 演示视频走 GitHub 托管，不入库，避免撑大仓库历史
-assert/*.mp4
+assets/*.mp4

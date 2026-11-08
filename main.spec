@@ -1,11 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
-# 文件夹打包（启动快）：pyinstaller main.spec  →  dist/stl-frame-editor/stl-frame-editor.exe
+# 文件夹打包（启动快）：uv run pyinstaller main.spec --noconfirm  →  dist/stl-frame-editor/stl-frame-editor.exe
 
 a = Analysis(
     ['run.py'],
     pathex=[],
     binaries=[],
-    datas=[('icon.ico', '.'), ('icon.png', '.')],   # 运行时图标（make_app_icon 从 _MEIPASS 找）
+    datas=[('assets/icon.ico', 'assets'), ('assets/icon.png', 'assets')],   # 运行时图标（make_app_icon 从 _MEIPASS/assets 找）
     hiddenimports=['stl_frame_editor'],
     hookspath=[],
     hooksconfig={},
@@ -31,7 +31,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name='stl-frame-editor',
-    icon='icon.ico',
+    icon='assets/icon.ico',
     contents_directory='stl-frame-editor-lib',   # 依赖目录名（PyInstaller 6 默认 _internal）
     debug=False,
     bootloader_ignore_signals=False,

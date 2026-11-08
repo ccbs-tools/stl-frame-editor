@@ -98,12 +98,12 @@ class _CheckWorker(QObject):
                 ver, url = check_latest_release(UPDATE_CHECK_TIMEOUT_S)
             except Exception as exc:  # noqa: BLE001
                 if self._cancelled:
-                    logger.debug("检查更新结果迟到（失败），对话框已关闭，丢弃: {!r}", exc)
+                    logger.debug("late update-check failure after dialog closed, dropped: {!r}", exc)
                     return
                 self._emit(self.failed, exc)
                 return
             if self._cancelled:
-                logger.debug("检查更新结果迟到（成功 v{}），对话框已关闭，丢弃", ver)
+                logger.debug("late update-check result v{} after dialog closed, dropped", ver)
                 return
             self._emit(self.done, ver, url)
         finally:
@@ -114,7 +114,7 @@ class _CheckWorker(QObject):
         try:
             sig.emit(*args)
         except RuntimeError as exc:  # C++ 对象已销毁
-            logger.debug("worker 信号发送失败（对象已销毁）: {}", exc)
+            logger.debug("worker signal emit failed (object destroyed): {}", exc)
 
 
 class UpdateCheckDialog(QDialog):
@@ -212,47 +212,47 @@ class UpdateCheckDialog(QDialog):
     def _open_download(self) -> None:
         if self._download_url:
             ok = QDesktopServices.openUrl(QUrl(self._download_url))
-            logger.info("点击下载新版本: {} -> {}", self._download_url, "ok" if ok else "失败")
+            logger.info("download clicked: {} -> {}", self._download_url, "ok" if ok else "failed")
 
     def _on_done(self, latest: str, url: object) -> None:
         if self._finished:
-            logger.debug("更新结果到达但对话框已结束（超时/取消），丢弃: v{}", latest)
+            logger.debug("update result arrived after dialog settled (timeout/cancel), dropped: v{}", latest)
             return
         download = str(url) if url else None
         c = cmp_version(str(latest), APP_VERSION)
         if c is not None and c > 0:
-            logger.info("结论: 发现新版本 v{} (当前 v{})", latest, APP_VERSION)
+            logger.info("verdict: new version v{} available (current v{})", latest, APP_VERSION)
             self._settle(
                 tr("upd.newer", cur=APP_VERSION, latest=latest),
                 download_url=download,
             )
         else:
-            logger.info("结论: 已是最新 (远端 v{}, 当前 v{}, cmp={})", latest, APP_VERSION, c)
+            logger.info("verdict: up to date (remote v{}, current v{}, cmp={})", latest, APP_VERSION, c)
             self._settle(tr("upd.latest", cur=APP_VERSION))
 
     def _on_failed(self, exc: object) -> None:
         if self._finished:
             return
         if isinstance(exc, UpdateCheckError):
-            logger.warning("结论: 检查失败 - {}", exc)
+            logger.warning("verdict: check failed - {}", exc)
             lines = "\n".join(f"{n}: {r}" for n, r in exc.details.items())
             self._settle(tr("upd.failed_short"), details=lines)
         elif isinstance(exc, TimeoutError):
-            logger.warning("结论: 后台预算用尽 - {}", exc)
+            logger.warning("verdict: background budget exhausted - {}", exc)
             self._settle(tr("upd.timeout", sec=int(UPDATE_CHECK_TIMEOUT_S)))
         else:
-            logger.warning("结论: 检查失败 - {!r}", exc)
+            logger.warning("verdict: check failed - {!r}", exc)
             reason = describe_error(exc) if isinstance(exc, BaseException) else str(exc)
             self._settle(tr("upd.failed_short"), details=reason)
 
     def _on_timeout(self) -> None:
-        logger.warning("结论: {:.0f} 秒倒计时超时，未收到结果", UPDATE_CHECK_TIMEOUT_S)
+        logger.warning("verdict: {:.0f}s countdown expired without a result", UPDATE_CHECK_TIMEOUT_S)
         self._worker.cancel()
         self._settle(tr("upd.timeout", sec=int(UPDATE_CHECK_TIMEOUT_S)))
 
     def reject(self) -> None:
         if not self._finished:
-            logger.info("用户取消检查更新（已等待 {:.1f} s）", time.monotonic() - self._t0)
+            logger.info("user cancelled update check after {:.1f} s", time.monotonic() - self._t0)
         self._finished = True
         self._worker.cancel()
         self._tick.stop()

@@ -7,27 +7,30 @@
 
 | 空窗口（拖放区） | 已加载 STL |
 |---|---|
-| ![空视图](assert/soft-empty-view.png) | ![加载视图](assert/open-stl-view.png) |
+| ![空视图](assets/soft-empty-view.png) | ![加载视图](assets/open-stl-view.png) |
 
 ### 演示
 
 https://private-user-images.githubusercontent.com/34444109/694237544-cf939573-5380-42bf-baad-11ce17f5d5cb.mp4
 
-依赖：PySide6、PyOpenGL、numpy、trimesh。
+依赖：PySide6、PyOpenGL、numpy、trimesh、loguru。
 
-## 安装
+## 下载
 
-```bash
-cd path/to/stl-frame-editor
-uv venv && uv pip install -e .
-```
+到 [Releases](https://github.com/ccbs-tools/stl-frame-editor-release/releases) 下载最新的
+`stl-frame-editor-vX.Y.Z-windows-x64.zip`，解压到任意位置运行 `stl-frame-editor.exe`。免安装；旁边的 `SHA256SUMS.txt` 可用来校验。
 
-## 运行
+要求：Windows 10/11 x64。
 
-```bash
-stl-frame-editor [xxx.stl]
-# 或
-python -m stl_frame_editor [xxx.stl]
+## 源码运行
+
+需要 [uv](https://docs.astral.sh/uv/)（会自动下载 Python）：
+
+```powershell
+git clone https://github.com/ccbs-tools/stl-frame-editor.git
+cd stl-frame-editor
+uv sync
+uv run python -m stl_frame_editor [xxx.stl]
 ```
 
 ## 操作
@@ -45,8 +48,8 @@ python -m stl_frame_editor [xxx.stl]
 
 ## 打包（onedir）
 
-```bash
-uv pip install pyinstaller
+```powershell
+uv sync --group dev
 uv run pyinstaller main.spec --noconfirm
 # 输出 dist/stl-frame-editor/stl-frame-editor.exe，依赖在同目录下
 ```
@@ -55,12 +58,16 @@ uv run pyinstaller main.spec --noconfirm
 
 ```
 stl_frame_editor/
-  __main__.py     入口 main()
-  main_window.py  主窗口、菜单、应用图标
-  gl_widget.py    OpenGL 视口（网格 / 坐标轴 / 相机 / 拖放）
-  panel.py        右上角旋转面板
-  mesh.py         STL 读取、旋转矩阵、rpy
-  i18n.py         多语言字符串与运行时切换
-run.py            PyInstaller 入口
-main.spec         PyInstaller 配置
+  __main__.py         入口 main()
+  main_window.py      主窗口、菜单、应用图标
+  gl_widget.py        OpenGL 视口（网格 / 坐标轴 / 相机 / 拖放）
+  panel.py            右上角旋转面板
+  mesh.py             STL 读取、旋转矩阵、rpy
+  i18n.py             多语言字符串与运行时切换
+  log.py              loguru 日志（%APPDATA%\ccbs\stl-frame-editor\logs\app.log）
+  changelog.py        版本历史 + 检查更新
+  version_dialogs.py  版本介绍 / 检查更新对话框
+assets/               icon.ico / icon.png 与 README 截图
+run.py                PyInstaller 入口
+main.spec             PyInstaller 配置
 ```

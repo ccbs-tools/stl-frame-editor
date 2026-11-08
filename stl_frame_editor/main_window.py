@@ -10,7 +10,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from .changelog import REPO_HOME, VIDEO_TUTORIAL
 from .gl_widget import StlGLWidget
 from .i18n import LANGUAGES, i18n, tr
-from .log import logger
+from .log import LOG_DIR, logger
 from .panel import RotatePanel
 from .version_dialogs import ChangelogDialog, UpdateCheckDialog
 
@@ -66,11 +66,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.act_changelog.triggered.connect(self._show_changelog)
         self.act_check_update = QtGui.QAction(self)
         self.act_check_update.triggered.connect(self._show_update_check)
+        self.act_open_log_dir = QtGui.QAction(self)
+        self.act_open_log_dir.triggered.connect(self._open_log_dir)
         self.menu_help.addAction(self.act_repo)
         self.menu_help.addAction(self.act_video)
         self.menu_help.addSeparator()
         self.menu_help.addAction(self.act_changelog)
         self.menu_help.addAction(self.act_check_update)
+        self.menu_help.addAction(self.act_open_log_dir)
 
         i18n.languageChanged.connect(self.retranslate)
         self.retranslate()
@@ -92,6 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.act_video.setText(tr("menu.video"))
         self.act_changelog.setText(tr("menu.changelog"))
         self.act_check_update.setText(tr("menu.check_update"))
+        self.act_open_log_dir.setText(tr("menu.open_log_dir"))
         self._update_title()
         if self.gl.verts is None:
             self.statusBar().showMessage(tr("status.drop_hint"))
@@ -100,14 +104,18 @@ class MainWindow(QtWidgets.QMainWindow):
     @staticmethod
     def _open_url(url: str) -> None:
         ok = QtGui.QDesktopServices.openUrl(QtCore.QUrl(url))
-        logger.info("打开链接: {} -> {}", url, "ok" if ok else "失败")
+        logger.info("open url: {} -> {}", url, "ok" if ok else "failed")
+
+    def _open_log_dir(self) -> None:
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
+        self._open_url(QtCore.QUrl.fromLocalFile(str(LOG_DIR)).toString())
 
     def _show_changelog(self) -> None:
-        logger.info("打开「版本介绍」")
+        logger.info("open changelog dialog")
         ChangelogDialog(self).exec()
 
     def _show_update_check(self) -> None:
-        logger.info("菜单触发「检查更新」")
+        logger.info("update check triggered from menu")
         UpdateCheckDialog(self).exec()
 
     def _update_title(self) -> None:
@@ -126,14 +134,14 @@ class MainWindow(QtWidgets.QMainWindow):
         fn, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, tr("dialog.open_title"), start, tr("dialog.open_filter"))
         if fn:
-            logger.info("打开对话框选择: {}", fn)
+            logger.info("open dialog picked: {}", fn)
             self.gl.load(fn)
         else:
-            logger.debug("打开对话框取消")
+            logger.debug("open dialog cancelled")
 
     def save_dialog(self):
         if self.gl.mesh is None:
-            logger.debug("另存为：尚未加载 STL，忽略")
+            logger.debug("save as: no STL loaded, ignored")
             self.statusBar().showMessage(tr("status.no_mesh"), 4000)
             return
         src = self.gl.path
@@ -142,20 +150,20 @@ class MainWindow(QtWidgets.QMainWindow):
         fn, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, tr("dialog.save_title"), str(default), tr("dialog.save_filter"))
         if not fn:
-            logger.debug("另存为对话框取消")
+            logger.debug("save as dialog cancelled")
             return
         if not fn.lower().endswith(".stl"):
             fn += ".stl"
         if Path(fn).resolve() == src.resolve():
-            logger.warning("另存为目标与源文件相同，询问是否覆盖: {}", src)
+            logger.warning("save as target equals source, asking to overwrite: {}", src)
             ret = QtWidgets.QMessageBox.question(
                 self, tr("dialog.overwrite_title"), tr("dialog.overwrite_text", path=src),
                 QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
                 QtWidgets.QMessageBox.StandardButton.No)
             if ret != QtWidgets.QMessageBox.StandardButton.Yes:
-                logger.info("用户取消覆盖原文件")
+                logger.info("user declined to overwrite the source file")
                 return
-            logger.info("用户确认覆盖原文件")
+            logger.info("user confirmed overwriting the source file")
         self.gl.save_as(fn)
 
     # 整个窗口（含菜单栏、状态栏）都接受拖放，转交给 GL 控件
@@ -167,20 +175,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 def _icon_search_dirs() -> list[Path]:
-    dirs: list[Path] = []
+    """图标目录：打包后在 _MEIPASS/assets，源码运行在项目根 assets/。"""
     meipass = getattr(sys, "_MEIPASS", None)
     if meipass:
-        dirs.append(Path(meipass))
-    pkg = Path(__file__).resolve().parent
-    dirs.append(pkg)            # 包内
-    dirs.append(pkg.parent)     # 项目根目录（源码运行时 icon 在这里）
-    exe_dir = Path(sys.executable).resolve().parent
-    dirs.append(exe_dir)
-    return dirs
+        return [Path(meipass) / "assets"]
+    return [Path(__file__).resolve().parents[1] / "assets"]
 
 
 def make_app_icon() -> QtGui.QIcon:
-    """程序图标：优先用 icon.ico / icon.png，否则画一个 XYZ 三色轴图标。"""
+    """程序图标：优先用 assets/icon.ico / icon.png，否则画一个 XYZ 三色轴图标。"""
     for d in _icon_search_dirs():
         for name in ("icon.ico", "icon.png"):
             p = d / name

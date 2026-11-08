@@ -77,16 +77,16 @@ class StlGLWidget(QOpenGLWidget):
     def load(self, path) -> bool:
         path = Path(path)
         size = path.stat().st_size if path.is_file() else -1
-        logger.info("加载 STL: {} ({:,} bytes)", path, size)
+        logger.info("loading STL: {} ({:,} bytes)", path, size)
         t0 = time.perf_counter()
         try:
             verts, normals, mesh = load_stl(path)
         except Exception as e:  # noqa: BLE001
-            logger.exception("加载失败: {}", path)
+            logger.exception("load failed: {}", path)
             self.loadFailed.emit(tr("gl.load_failed", name=path.name, err=e))
             return False
         if len(verts) == 0:
-            logger.warning("文件没有三角面: {}", path)
+            logger.warning("file has no triangles: {}", path)
             self.loadFailed.emit(tr("gl.no_triangles", name=path.name))
             return False
         self.path = path
@@ -98,7 +98,7 @@ class StlGLWidget(QOpenGLWidget):
         self.rotationChanged.emit()
         ext = self.bbox_max - self.bbox_min
         logger.info(
-            "加载完成: {} 三角面, 包围盒 min={} max={} 尺寸={} , 耗时 {:.0f} ms",
+            "loaded: {} triangles, bbox min={} max={} size={}, {:.0f} ms",
             f"{self.n_faces:,}",
             np.round(self.bbox_min, 4).tolist(),
             np.round(self.bbox_max, 4).tolist(),
@@ -116,7 +116,7 @@ class StlGLWidget(QOpenGLWidget):
         self.rot = rot_matrix(axis, deg) @ self.rot
         self._apply_rotation()
         self.rotationChanged.emit()
-        logger.info("旋转 {}{:+d}° | 序列={} | rpy={}",
+        logger.info("rotate {}{:+d} deg | ops={} | rpy={}",
                     axis, deg, self._ops_str(), self._rpy_str())
 
     def undo_rotation(self) -> None:
@@ -128,13 +128,13 @@ class StlGLWidget(QOpenGLWidget):
             self.rot = rot_matrix(axis, deg) @ self.rot
         self._apply_rotation()
         self.rotationChanged.emit()
-        logger.info("撤销 {}{:+d}° | 序列={} | rpy={}",
-                    undone[0], undone[1], self._ops_str() or "(空)", self._rpy_str())
+        logger.info("undo {}{:+d} deg | ops={} | rpy={}",
+                    undone[0], undone[1], self._ops_str() or "(empty)", self._rpy_str())
 
     def reset_rotation(self) -> None:
         if not self.ops:
             return
-        logger.info("复位旋转，丢弃序列 {}", self._ops_str())
+        logger.info("reset rotation, dropping ops {}", self._ops_str())
         self.ops = []
         self.rot = np.eye(3)
         self._apply_rotation()
@@ -159,8 +159,8 @@ class StlGLWidget(QOpenGLWidget):
         if self.mesh is None:
             return False
         path = Path(path)
-        logger.info("另存为 STL: {} | 源={} | 序列={} | rpy={} | 面数={:,}",
-                    path, self.path, self._ops_str() or "(未旋转)", self._rpy_str(), self.n_faces)
+        logger.info("save as STL: {} | source={} | ops={} | rpy={} | faces={:,}",
+                    path, self.path, self._ops_str() or "(not rotated)", self._rpy_str(), self.n_faces)
         t0 = time.perf_counter()
         try:
             T = np.eye(4)
@@ -169,11 +169,11 @@ class StlGLWidget(QOpenGLWidget):
             out.apply_transform(T)
             out.export(str(path), file_type="stl")
         except Exception as e:  # noqa: BLE001
-            logger.exception("保存失败: {}", path)
+            logger.exception("save failed: {}", path)
             self.loadFailed.emit(tr("gl.save_failed", name=path.name, err=e))
             return False
         size = path.stat().st_size if path.is_file() else -1
-        logger.info("保存完成: {:,} 三角面, {:,} bytes, 耗时 {:.0f} ms",
+        logger.info("saved: {:,} triangles, {:,} bytes, {:.0f} ms",
                     len(out.faces), size, (time.perf_counter() - t0) * 1000)
         self.meshLoaded.emit(tr("gl.saved", path=path, n=f"{len(out.faces):,}"))
         return True
@@ -272,8 +272,8 @@ class StlGLWidget(QOpenGLWidget):
         files = self._stl_urls(e.mimeData())
         if files:
             if len(files) > 1:
-                logger.info("拖入 {} 个文件，只加载第一个", len(files))
-            logger.info("拖放加载: {}", files[0])
+                logger.info("{} files dropped, loading only the first", len(files))
+            logger.info("drop load: {}", files[0])
             self.load(files[0])
             e.acceptProposedAction()
 

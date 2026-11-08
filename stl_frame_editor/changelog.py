@@ -36,6 +36,23 @@ UPDATE_CHECK_TIMEOUT_S = 20.0
 
 RELEASES: tuple[dict, ...] = (
     {
+        "version": "0.2.1",
+        "date": "2026-11-08",
+        "notes": {
+            "zh": [
+                "对齐 CCBS 工具规范：日志改到 %APPDATA%\\ccbs\\stl-frame-editor\\logs\\app.log，帮助菜单新增「打开日志目录」。",
+                "首次运行语言跟随系统（中文系统 → 中文），之前选过的语言需重新选一次。",
+                "统一 Fusion 风格与字体；构建改用 uv，要求 Python 3.12。",
+            ],
+            "en": [
+                "Aligned with the CCBS tool conventions: log moved to %APPDATA%\\ccbs\\stl-frame-editor\\logs\\app.log; "
+                "Help menu gains \"Open Log Folder\".",
+                "First-run language follows the system locale (Chinese system -> Chinese); a previously chosen language must be picked again.",
+                "Unified Fusion style and font; build uses uv and requires Python 3.12.",
+            ],
+        },
+    },
+    {
         "version": "0.2.0",
         "date": "2026-11-06",
         "notes": {
@@ -209,7 +226,7 @@ def check_latest_release(timeout_s: float = UPDATE_CHECK_TIMEOUT_S) -> tuple[str
         seq = _check_seq
     tag = f"#{seq}"
 
-    logger.info("{} 检查更新开始 | 当前 v{} | 预算 {:.0f}s | 并发方式: {}",
+    logger.info("{} update check start | current v{} | budget {:.0f}s | methods: {}",
                 tag, APP_VERSION, timeout_s, " / ".join(n for n, _ in _METHODS))
     t0 = time.perf_counter()
     results: "queue.Queue[tuple[str, bool, object, float]]" = queue.Queue()
@@ -219,11 +236,11 @@ def check_latest_release(timeout_s: float = UPDATE_CHECK_TIMEOUT_S) -> tuple[str
         try:
             payload = fn(timeout_s)
             dt = (time.perf_counter() - t) * 1000
-            logger.debug("{} [{}] 完成 ok 耗时 {:.0f} ms -> {}", tag, name, dt, payload)
+            logger.debug("{} [{}] ok in {:.0f} ms -> {}", tag, name, dt, payload)
             results.put((name, True, payload, dt))
         except Exception as exc:  # noqa: BLE001
             dt = (time.perf_counter() - t) * 1000
-            logger.debug("{} [{}] 完成 fail 耗时 {:.0f} ms -> {!r}", tag, name, dt, exc)
+            logger.debug("{} [{}] failed in {:.0f} ms -> {!r}", tag, name, dt, exc)
             results.put((name, False, exc, dt))
 
     for name, fn in _METHODS:
@@ -241,20 +258,20 @@ def check_latest_release(timeout_s: float = UPDATE_CHECK_TIMEOUT_S) -> tuple[str
             break
         if ok:
             ver, url = payload  # type: ignore[misc]
-            logger.info("{} 检查更新成功 [胜出方式={}] 最新 v{} | 下载 {} | 该方式耗时 {:.0f} ms | 总耗时 {:.0f} ms{}",
+            logger.info("{} update check ok [winner={}] latest v{} | download {} | method {:.0f} ms | total {:.0f} ms{}",
                         tag, name, ver, url, dt, (time.perf_counter() - t0) * 1000,
-                        f" | 已失败: {list(errors)}" if errors else "")
+                        f" | failed: {list(errors)}" if errors else "")
             return ver, url
         errors[name] = payload  # type: ignore[assignment]
-        logger.warning("{} [{}] 失败 ({:.0f} ms): {!r}，等待其它方式", tag, name, dt, payload)
+        logger.warning("{} [{}] failed ({:.0f} ms): {!r}, waiting for other methods", tag, name, dt, payload)
 
     total_ms = (time.perf_counter() - t0) * 1000
     if len(errors) < len(_METHODS):
         pending = [n for n, _ in _METHODS if n not in errors]
-        logger.error("{} 预算 {:.0f}s 用尽，仍无成功结果 | 已失败 {} | 仍在等待 {} | 总耗时 {:.0f} ms",
+        logger.error("{} budget {:.0f}s exhausted without success | failed {} | pending {} | total {:.0f} ms",
                      tag, timeout_s, list(errors), pending, total_ms)
-        raise TimeoutError(f"{timeout_s:.0f}s 内没有任何方式返回成功")
-    logger.error("{} 两种方式均失败 | {} | 总耗时 {:.0f} ms", tag,
+        raise TimeoutError(f"no method succeeded within {timeout_s:.0f}s")
+    logger.error("{} all methods failed | {} | total {:.0f} ms", tag,
                  "; ".join(f"{n}: {e!r}" for n, e in errors.items()), total_ms)
     raise UpdateCheckError({n: describe_error(e) for n, e in errors.items()})
 

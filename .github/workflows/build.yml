@@ -1,5 +1,8 @@
 name: Build (PyInstaller)
 
+# 源码私有仓库用的版本：Release 发布到独立的公开仓库 RELEASE_REPO。
+# 使用时把本文件改名为 build.yml（删掉另一个），并把 changelog.py 的 RELEASE_REPO 改成同一个值。
+#
 # 触发方式：
 #   1) 在 Actions 页面手动点 "Run workflow"（workflow_dispatch）：只打包，产物在 Artifacts
 #   2) 推送 v 开头的 tag（如 v0.1.0）：打包并发布 Release 到公开仓库 RELEASE_REPO
@@ -27,16 +30,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.11"
+          enable-cache: true
 
       - name: Install dependencies
+        run: uv sync --group dev
+
+      # 规则：changelog.py 的 RELEASE_REPO 含 "release" 字样 → 源码私有，Release 通过 App Secrets 发到
+      # 独立公开仓库，所以它必须等于本工作流的 env.RELEASE_REPO（程序检查更新才会查对地方）。
+      - name: Check release target
+        shell: pwsh
         run: |
-          python -m pip install --upgrade pip
-          pip install .
-          pip install pyinstaller
+          $m = Select-String -Path stl_frame_editor/changelog.py -Pattern '^RELEASE_REPO\s*=\s*"([^"]+)"'
+          if (-not $m) { Write-Error "RELEASE_REPO not found in stl_frame_editor/changelog.py"; exit 1 }
+          $target = $m.Matches.Groups[1].Value
+          Write-Host "changelog RELEASE_REPO=$target  workflow RELEASE_REPO=$env:RELEASE_REPO"
+          if ($target -notmatch 'release') {
+            Write-Error "RELEASE_REPO '$target' has no 'release' in its name: this workflow publishes to a separate public release repo and expects ccbs-tools/<name>-release. Use build.yml instead if the source repo is public (see dev-rules/CONVENTIONS.md §8)."
+            exit 1
+          }
+          if ($target -ne $env:RELEASE_REPO) {
+            Write-Error "RELEASE_REPO in changelog.py ('$target') must equal env.RELEASE_REPO in this workflow ('$env:RELEASE_REPO')."
+            exit 1
+          }
 
       - name: Resolve version
         id: ver
@@ -51,8 +69,22 @@ jobs:
           "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "version = $v"
 
+      - name: Check version consistency (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          VER: ${{ steps.ver.outputs.version }}
+        run: |
+          $py = (Select-String -Path pyproject.toml -Pattern '^version\s*=\s*"(.+)"').Matches.Groups[1].Value
+          $init = (Select-String -Path stl_frame_editor/__init__.py -Pattern '__version__\s*=\s*"(.+)"').Matches.Groups[1].Value
+          Write-Host "tag=$env:VER pyproject=$py __init__=$init"
+          if ($py -ne $env:VER -or $init -ne $env:VER) {
+            Write-Error "version mismatch: tag=$env:VER pyproject=$py __init__=$init (see dev.md)"
+            exit 1
+          }
+
       - name: Build with PyInstaller
-        run: pyinstaller main.spec --noconfirm
+        run: uv run pyinstaller main.spec --noconfirm
 
       - name: Package zip
         id: pack
@@ -75,12 +107,13 @@ jobs:
 
       - name: Release notes from changelog.py
         if: startsWith(github.ref, 'refs/tags/')
-        shell: python
+        shell: pwsh
         env:
           PYTHONUTF8: "1"   # Windows runner 默认 cp1252，print 中文会崩
           VER: ${{ steps.ver.outputs.version }}
           ZIP: ${{ steps.pack.outputs.zip }}
         run: |
+          @'
           import os
           from stl_frame_editor.changelog import RELEASES, release_notes
 
@@ -93,10 +126,13 @@ jobs:
               lines.append(f"发布日期 / Date: {entry.get('date', '')}")
               lines += ["", "### 更新内容"] + [f"- {s}" for s in release_notes(entry, "zh")]
               lines += ["", "### Changes"] + [f"- {s}" for s in release_notes(entry, "en")]
-          lines += ["", "### 下载 / Download", f"- Windows x64: `{zip_name}`"]
+          lines += ["", "### 下载 / Download", f"- Windows x64: `{zip_name}`（解压后运行 stl-frame-editor.exe）",
+                    "- 校验: `SHA256SUMS.txt`"]
           with open("RELEASE_NOTES.md", "w", encoding="utf-8") as f:
               f.write("\n".join(lines) + "\n")
           print(open("RELEASE_NOTES.md", encoding="utf-8").read())
+          '@ | Set-Content -Path release_notes.py -Encoding UTF8
+          uv run python release_notes.py
 
       - name: Mint GitHub App token for release repo
         if: startsWith(github.ref, 'refs/tags/')
@@ -127,7 +163,7 @@ jobs:
           cat > README.md <<EOF
           # stl-frame-editor
 
-          CCBS STL 坐标系修改器的发布仓库。Windows 安装包见 [Releases](https://github.com/${RELEASE_REPO}/releases)。
+          STL 坐标系修改器 的发布仓库。Windows 安装包见 [Releases](https://github.com/${RELEASE_REPO}/releases)。
 
           Release-only repository for stl-frame-editor. Windows builds are under [Releases](https://github.com/${RELEASE_REPO}/releases).
           EOF

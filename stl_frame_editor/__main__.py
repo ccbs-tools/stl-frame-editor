@@ -24,18 +24,18 @@ def main(argv: list[str] | None = None) -> int:
 
     from PySide6 import QtCore, QtGui, QtWidgets
 
-    from . import __version__
+    from . import APP_NAME, __version__
     from .i18n import i18n
     from .main_window import MainWindow, make_app_icon
 
     args = sys.argv[1:] if argv is None else argv
     logger.info("=" * 60)
     logger.info(
-        "stl-frame-editor v{} 启动 | python {} | PySide6 {} | {} | frozen={}",
-        __version__, platform.python_version(), QtCore.__version__,
+        "{} v{} starting | python {} | PySide6 {} | {} | frozen={}",
+        APP_NAME, __version__, platform.python_version(), QtCore.__version__,
         platform.platform(), bool(getattr(sys, "frozen", False)),
     )
-    logger.info("日志文件: {}", log_file)
+    logger.info("log file: {}", log_file)
     logger.debug("argv: {}", args)
 
     # Windows：不用 Python 默认 AppID，任务栏才会显示本程序图标而不是 python.exe
@@ -43,10 +43,11 @@ def main(argv: list[str] | None = None) -> int:
         try:
             import ctypes
 
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("com.ccbs.stl_view")
-        except Exception:  # noqa: BLE001
-            pass
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"ccbs.{APP_NAME}")
+        except Exception as e:  # noqa: BLE001
+            logger.warning("SetCurrentProcessExplicitAppUserModelID failed: {}", e)
 
+    # 3D 工具：QSurfaceFormat 必须早于 QApplication
     fmt = QtGui.QSurfaceFormat()
     fmt.setSamples(4)
     fmt.setDepthBufferSize(24)
@@ -54,20 +55,23 @@ def main(argv: list[str] | None = None) -> int:
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 
     app = QtWidgets.QApplication(sys.argv)
-    app.setOrganizationName("CCBS")
-    app.setApplicationName("CCBS STL View")
-    i18n.load()                      # 读取上次选的语言（首次默认英文）
+    app.setOrganizationName("ccbs")
+    app.setApplicationName(APP_NAME)
+    app.setApplicationVersion(__version__)
+    app.setStyle("Fusion")
+    app.setFont(QtGui.QFont("Microsoft YaHei UI", 9))
+    i18n.load()                      # 读取上次选的语言（首次跟随系统），需在 QApplication 之后
     icon = make_app_icon()
     app.setWindowIcon(icon)
 
     initial = args[0] if args else None
     if initial:
-        logger.info("命令行指定启动文件: {}", initial)
+        logger.info("initial file from argv: {}", initial)
     win = MainWindow(initial)
     win.setWindowIcon(icon)
     win.show()
     code = app.exec()
-    logger.info("程序退出 code={}", code)
+    logger.info("exit code={}", code)
     return code
 
 
