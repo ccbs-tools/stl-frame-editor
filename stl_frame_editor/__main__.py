@@ -24,7 +24,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from PySide6 import QtCore, QtGui, QtWidgets
 
-    from . import APP_NAME, __version__
+    from . import APP_NAME, ORG, __version__
     from .i18n import i18n
     from .main_window import MainWindow, make_app_icon
 
@@ -43,7 +43,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             import ctypes
 
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"ccbs.{APP_NAME}")
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(f"{ORG}.{APP_NAME}")
         except Exception as e:  # noqa: BLE001
             logger.warning("SetCurrentProcessExplicitAppUserModelID failed: {}", e)
 
@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     QtGui.QSurfaceFormat.setDefaultFormat(fmt)
 
     app = QtWidgets.QApplication(sys.argv)
-    app.setOrganizationName("ccbs")
+    app.setOrganizationName(ORG)
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(__version__)
     app.setStyle("Fusion")

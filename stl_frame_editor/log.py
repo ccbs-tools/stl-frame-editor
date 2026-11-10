@@ -17,9 +17,9 @@ from pathlib import Path
 
 from loguru import logger
 
-from . import APP_NAME
+from . import APP_NAME, ORG
 
-APP_DATA_DIR = Path(os.environ.get("APPDATA") or Path.home()) / "ccbs" / APP_NAME
+APP_DATA_DIR = Path(os.environ.get("APPDATA") or Path.home()) / ORG / APP_NAME
 LOG_DIR = APP_DATA_DIR / "logs"
 LOG_FILE = LOG_DIR / "app.log"
 ROTATION = "10 MB"
