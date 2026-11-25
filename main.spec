@@ -5,7 +5,7 @@ a = Analysis(
     ['run.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets/icon.ico', 'assets'), ('assets/icon.png', 'assets')],   # 运行时图标（make_app_icon 从 _MEIPASS/assets 找）
+    datas=[('assets/icon.ico', 'assets'), ('assets/icon.png', 'assets')],   # 运行时图标（icons.app_icon 从 _MEIPASS/assets 找）
     hiddenimports=['stl_frame_editor'],
     hookspath=[],
     hooksconfig={},

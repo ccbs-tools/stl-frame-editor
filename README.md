@@ -62,7 +62,8 @@ uv run pyinstaller main.spec --noconfirm
 ```
 stl_frame_editor/
   __main__.py         entry point main()
-  main_window.py      main window, menus, app icon
+  main_window.py      main window, menus
+  icons.py            app icon (assets/icon.ico, drawn fallback)
   gl_widget.py        OpenGL viewport (grid / axes / camera / drag-drop)
   panel.py            top-right rotation panel
   mesh.py             STL loading, rotation matrix, rpy

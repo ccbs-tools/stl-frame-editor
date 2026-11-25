@@ -25,13 +25,14 @@ uv run pyinstaller main.spec --noconfirm   # 本地打包 → dist\stl-frame-edi
 run.py                       PyInstaller 入口（转调 stl_frame_editor.__main__:main）
 main.spec                    PyInstaller onedir 配置（裁掉未用的 Qt 模块；3D 工具保留 QtOpenGL）
 stl_frame_editor/
-  __init__.py                APP_NAME、__version__
+  __init__.py                ORG、APP_NAME、__version__
   __main__.py                入口：日志初始化、QSurfaceFormat、QApplication、主窗口
   i18n.py                    中英文文案表，tr() / i18n.languageChanged
   log.py                     loguru 日志；接管未捕获异常、Qt 消息、stdlib logging
   changelog.py               版本历史（Release 说明从这里生成）+ GitHub Releases 检查更新
   version_dialogs.py         版本介绍 / 检查更新对话框
-  main_window.py             主窗口、菜单栏、应用图标
+  icons.py                   应用图标：assets/icon.ico，找不到就现画一个 XYZ 三色轴
+  main_window.py             主窗口、菜单栏
   gl_widget.py               OpenGL 视口（网格 / 坐标轴 / 相机 / 拖放）
   panel.py                   右上角旋转面板
   mesh.py                    STL 读取、旋转矩阵、rpy

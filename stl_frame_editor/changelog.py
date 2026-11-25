@@ -17,20 +17,21 @@ import urllib.parse
 import urllib.request
 from typing import Callable, Optional
 
+from . import APP_NAME
 from . import __version__ as APP_VERSION
 from .log import logger
 
 # 源码仓库 ccbs-tools/stl-frame-editor 为私有；Release 由 Actions 发布到下面这个公开仓库
 RELEASE_REPO = "ccbs-tools/stl-frame-editor-release"
 REPO_HOME = f"https://github.com/{RELEASE_REPO}"
-# 视频教程占位：有正式地址后改这里即可
-VIDEO_TUTORIAL = f"{REPO_HOME}#demo"
+# 视频教程地址；None 表示帮助菜单不显示该项
+VIDEO_TUTORIAL: Optional[str] = None
 # 方式一：网页 /releases/latest 会 302 到 /releases/tag/<tag>，没有 API 的 60 次/小时限额
 RELEASES_LATEST_PAGE = f"{REPO_HOME}/releases/latest"
 # 方式二：REST API（未登录按 IP 限 60 次/小时，走共享代理时容易 403）
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases/latest"
 # 与 .github/workflows/build.yml 里 "Package zip" 的命名保持一致
-ASSET_NAME_FMT = "stl-frame-editor-v{ver}-windows-x64.zip"
+ASSET_NAME_FMT = APP_NAME + "-v{ver}-windows-x64.zip"
 # 检查更新总预算：两种方式并发竞速，谁先成功用谁；与对话框倒计时一致
 UPDATE_CHECK_TIMEOUT_S = 20.0
 
@@ -128,7 +129,7 @@ def cmp_version(a: str, b: str) -> Optional[int]:
     return 0
 
 
-_UA = {"User-Agent": f"stl-frame-editor/{APP_VERSION}"}
+_UA = {"User-Agent": f"{APP_NAME}/{APP_VERSION}"}
 
 
 def _latest_via_page(timeout_s: float) -> tuple[str, Optional[str]]:
@@ -205,8 +206,8 @@ def describe_error(exc: BaseException) -> str:
 
 
 _METHODS: tuple[tuple[str, Callable[[float], tuple[str, Optional[str]]]], ...] = (
-    ("网页跳转", _latest_via_page),
-    ("API", _latest_via_api),
+    ("page", _latest_via_page),
+    ("api", _latest_via_api),
 )
 
 _check_seq = 0

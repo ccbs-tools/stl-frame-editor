@@ -59,7 +59,8 @@ uv run pyinstaller main.spec --noconfirm
 ```
 stl_frame_editor/
   __main__.py         入口 main()
-  main_window.py      主窗口、菜单、应用图标
+  main_window.py      主窗口、菜单
+  icons.py            应用图标（assets/icon.ico，找不到就现画）
   gl_widget.py        OpenGL 视口（网格 / 坐标轴 / 相机 / 拖放）
   panel.py            右上角旋转面板
   mesh.py             STL 读取、旋转矩阵、rpy

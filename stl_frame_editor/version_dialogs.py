@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import APP_NAME
 from .changelog import (
     APP_VERSION,
     RELEASES,
@@ -90,7 +91,7 @@ class _CheckWorker(QObject):
 
     def start(self) -> None:
         _LIVE_WORKERS.add(self)
-        threading.Thread(target=self._run, name="stl-update-check", daemon=True).start()
+        threading.Thread(target=self._run, name=f"{APP_NAME}-update-check", daemon=True).start()
 
     def _run(self) -> None:
         try:
@@ -118,7 +119,7 @@ class _CheckWorker(QObject):
 
 
 class UpdateCheckDialog(QDialog):
-    """检查更新：10 秒倒计时进度条（从满往回退），到 0 算超时。结果显示在同一框里。"""
+    """检查更新：倒计时进度条（从满往回退），到 0 算超时。结果显示在同一框里。"""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -286,3 +287,6 @@ class ChangelogDialog(QDialog):
 
     def _check(self) -> None:
         UpdateCheckDialog(self).exec()
+
+
+__all__ = ["ChangelogDialog", "UpdateCheckDialog"]

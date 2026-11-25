@@ -1,8 +1,7 @@
-"""主窗口与应用图标。"""
+"""主窗口、菜单栏。"""
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -60,8 +59,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.menu_help = self.menuBar().addMenu("")
         self.act_repo = QtGui.QAction(self)
         self.act_repo.triggered.connect(lambda: self._open_url(REPO_HOME))
-        self.act_video = QtGui.QAction(self)
-        self.act_video.triggered.connect(lambda: self._open_url(VIDEO_TUTORIAL))
+        # 视频教程：changelog.VIDEO_TUTORIAL 有地址才显示这一项
+        self.act_video: QtGui.QAction | None = None
+        if VIDEO_TUTORIAL:
+            self.act_video = QtGui.QAction(self)
+            self.act_video.triggered.connect(lambda: self._open_url(VIDEO_TUTORIAL))
         self.act_changelog = QtGui.QAction(self)
         self.act_changelog.triggered.connect(self._show_changelog)
         self.act_check_update = QtGui.QAction(self)
@@ -69,7 +71,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.act_open_log_dir = QtGui.QAction(self)
         self.act_open_log_dir.triggered.connect(self._open_log_dir)
         self.menu_help.addAction(self.act_repo)
-        self.menu_help.addAction(self.act_video)
+        if self.act_video is not None:
+            self.menu_help.addAction(self.act_video)
         self.menu_help.addSeparator()
         self.menu_help.addAction(self.act_changelog)
         self.menu_help.addAction(self.act_check_update)
@@ -92,7 +95,8 @@ class MainWindow(QtWidgets.QMainWindow):
             act.setChecked(act.data() == i18n.lang)
         self.menu_help.setTitle(tr("menu.help"))
         self.act_repo.setText(tr("menu.repo"))
-        self.act_video.setText(tr("menu.video"))
+        if self.act_video is not None:
+            self.act_video.setText(tr("menu.video"))
         self.act_changelog.setText(tr("menu.changelog"))
         self.act_check_update.setText(tr("menu.check_update"))
         self.act_open_log_dir.setText(tr("menu.open_log_dir"))
@@ -172,50 +176,3 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def dropEvent(self, e):
         self.gl.dropEvent(e)
-
-
-def _icon_search_dirs() -> list[Path]:
-    """图标目录：打包后在 _MEIPASS/assets，源码运行在项目根 assets/。"""
-    meipass = getattr(sys, "_MEIPASS", None)
-    if meipass:
-        return [Path(meipass) / "assets"]
-    return [Path(__file__).resolve().parents[1] / "assets"]
-
-
-def make_app_icon() -> QtGui.QIcon:
-    """程序图标：优先用 assets/icon.ico / icon.png，否则画一个 XYZ 三色轴图标。"""
-    for d in _icon_search_dirs():
-        for name in ("icon.ico", "icon.png"):
-            p = d / name
-            if p.is_file():
-                return QtGui.QIcon(str(p))
-
-    icon = QtGui.QIcon()
-    for size in (16, 32, 48, 64, 128, 256):
-        pm = QtGui.QPixmap(size, size)
-        pm.fill(QtCore.Qt.GlobalColor.transparent)
-        p = QtGui.QPainter(pm)
-        p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
-        r = size * 0.12
-        p.setBrush(QtGui.QColor(28, 32, 40))
-        p.setPen(QtCore.Qt.PenStyle.NoPen)
-        p.drawRoundedRect(0, 0, size, size, r, r)
-        o = QtCore.QPointF(size * 0.42, size * 0.58)
-        L = size * 0.32
-        pen = QtGui.QPen()
-        pen.setCapStyle(QtCore.Qt.PenCapStyle.RoundCap)
-        pen.setWidthF(max(1.5, size * 0.08))
-        for color, dx, dy in (
-            (QtGui.QColor(235, 50, 50), L, L * 0.15),
-            (QtGui.QColor(50, 200, 50), -L * 0.15, -L),
-            (QtGui.QColor(60, 110, 255), L * 0.55, -L * 0.55),
-        ):
-            pen.setColor(color)
-            p.setPen(pen)
-            p.drawLine(o, QtCore.QPointF(o.x() + dx, o.y() + dy))
-        p.setPen(QtCore.Qt.PenStyle.NoPen)
-        p.setBrush(QtGui.QColor(255, 255, 255))
-        p.drawEllipse(o, size * 0.05, size * 0.05)
-        p.end()
-        icon.addPixmap(pm)
-    return icon

@@ -122,13 +122,15 @@ jobs:
           entry = next((e for e in RELEASES if e["version"] == ver), None)
           lines = [f"## stl-frame-editor v{ver}", ""]
           if entry is None:
-              lines.append(f"（changelog.py 中没有 {ver} 的条目，请补充 RELEASES）")
+              lines.append(f"(no entry for {ver} in changelog.py RELEASES / changelog.py 中没有 {ver} 的条目，请补充 RELEASES)")
           else:
-              lines.append(f"发布日期 / Date: {entry.get('date', '')}")
-              lines += ["", "### 更新内容"] + [f"- {s}" for s in release_notes(entry, "zh")]
+              # 双语内容一律英文在前、中文在后
+              lines.append(f"Date / 发布日期: {entry.get('date', '')}")
               lines += ["", "### Changes"] + [f"- {s}" for s in release_notes(entry, "en")]
-          lines += ["", "### 下载 / Download", f"- Windows x64: `{zip_name}`（解压后运行 stl-frame-editor.exe）",
-                    "- 校验: `SHA256SUMS.txt`"]
+              lines += ["", "### 更新内容"] + [f"- {s}" for s in release_notes(entry, "zh")]
+          lines += ["", "### Download / 下载",
+                    f"- Windows x64: `{zip_name}` (unzip and run stl-frame-editor.exe / 解压后运行 stl-frame-editor.exe)",
+                    "- Checksums / 校验: `SHA256SUMS.txt`"]
           with open("RELEASE_NOTES.md", "w", encoding="utf-8") as f:
               f.write("\n".join(lines) + "\n")
           print(open("RELEASE_NOTES.md", encoding="utf-8").read())

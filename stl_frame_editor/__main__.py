@@ -26,7 +26,8 @@ def main(argv: list[str] | None = None) -> int:
 
     from . import APP_NAME, ORG, __version__
     from .i18n import i18n
-    from .main_window import MainWindow, make_app_icon
+    from .icons import app_icon
+    from .main_window import MainWindow
 
     args = sys.argv[1:] if argv is None else argv
     logger.info("=" * 60)
@@ -61,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     app.setStyle("Fusion")
     app.setFont(QtGui.QFont("Microsoft YaHei UI", 9))
     i18n.load()                      # 读取上次选的语言（首次跟随系统），需在 QApplication 之后
-    icon = make_app_icon()
+    icon = app_icon()
     app.setWindowIcon(icon)
 
     initial = args[0] if args else None
